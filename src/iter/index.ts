@@ -1,5 +1,10 @@
 import IterResult from '../iterresult'
-import { ParsedOptions, freqIsDailyOrGreater, QueryMethodTypes } from '../types'
+import {
+  ParsedOptions,
+  freqIsDailyOrGreater,
+  QueryMethodTypes,
+  Frequency,
+} from '../types'
 import { combine, fromOrdinal, MAXYEAR } from '../dateutil'
 import Iterinfo from '../iterinfo/index'
 import { RRule } from '../rrule'
@@ -20,7 +25,7 @@ export function iter<M extends QueryMethodTypes>(
     return emitResult(iterResult)
   }
 
-  const counterDate = DateTime.fromDate(dtstart)
+  const counterDate = getInitialCounterDate(iterResult, options)
 
   const ii = new Iterinfo(options)
   ii.rebuild(counterDate.year, counterDate.month)
@@ -205,5 +210,83 @@ function makeTimeset(
     counterDate.minute,
     counterDate.second,
     counterDate.millisecond
+  )
+}
+
+function getInitialCounterDate<M extends QueryMethodTypes>(
+  iterResult: IterResult<M>,
+  options: ParsedOptions
+) {
+  const counterDate = DateTime.fromDate(options.dtstart)
+  const minDate = iterResult.minDate
+
+  if (options.count || !minDate || minDate <= options.dtstart) {
+    return counterDate
+  }
+
+  switch (options.freq) {
+    case Frequency.DAILY:
+      return jumpToDailyInterval(counterDate, minDate, options.interval)
+    case Frequency.HOURLY:
+      return jumpToMinuteBasedInterval(
+        options.dtstart,
+        minDate,
+        options.interval * 60 * 60 * 1000
+      )
+    case Frequency.MINUTELY:
+      return jumpToMinuteBasedInterval(
+        options.dtstart,
+        minDate,
+        options.interval * 60 * 1000
+      )
+    case Frequency.SECONDLY:
+      return jumpToMinuteBasedInterval(
+        options.dtstart,
+        minDate,
+        options.interval * 1000
+      )
+    default:
+      return counterDate
+  }
+}
+
+function jumpToDailyInterval(
+  counterDate: DateTime,
+  minDate: Date,
+  interval: number
+) {
+  const elapsedDays = Math.floor(
+    (Date.UTC(
+      minDate.getUTCFullYear(),
+      minDate.getUTCMonth(),
+      minDate.getUTCDate()
+    ) -
+      Date.UTC(counterDate.year, counterDate.month - 1, counterDate.day)) /
+      (24 * 60 * 60 * 1000)
+  )
+  const intervals = Math.floor(elapsedDays / interval)
+
+  if (intervals > 0) {
+    counterDate.addDaily(intervals * interval)
+  }
+
+  return counterDate
+}
+
+function jumpToMinuteBasedInterval(
+  dtstart: Date,
+  minDate: Date,
+  intervalMs: number
+) {
+  const elapsedIntervals = Math.floor(
+    (minDate.getTime() - dtstart.getTime()) / intervalMs
+  )
+
+  if (elapsedIntervals <= 0) {
+    return DateTime.fromDate(dtstart)
+  }
+
+  return DateTime.fromDate(
+    new Date(dtstart.getTime() + elapsedIntervals * intervalMs)
   )
 }

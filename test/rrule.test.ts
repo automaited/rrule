@@ -166,6 +166,37 @@ describe('RRule', function () {
   )
 
   testRecurring(
+    'testAfterMinutelyFarPastDtstart',
+    {
+      rrule: new RRule({
+        freq: RRule.MINUTELY,
+        dtstart: parse('19700101T000000'),
+      }),
+      method: 'after',
+      args: [parse('20250101T000000')],
+    },
+    datetime(2025, 1, 1, 0, 1)
+  )
+
+  testRecurring(
+    'testBetweenMinutelyFarPastDtstart',
+    {
+      rrule: new RRule({
+        freq: RRule.MINUTELY,
+        dtstart: parse('19700101T000000'),
+      }),
+      method: 'between',
+      args: [parse('20250101T000000'), parse('20250101T000300'), true],
+    },
+    [
+      datetime(2025, 1, 1, 0, 0),
+      datetime(2025, 1, 1, 0, 1),
+      datetime(2025, 1, 1, 0, 2),
+      datetime(2025, 1, 1, 0, 3),
+    ]
+  )
+
+  testRecurring(
     'testBetweenWithTZ',
     {
       rrule: new RRule({

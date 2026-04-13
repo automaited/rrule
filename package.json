@@ -85,7 +85,5 @@
     "README.md"
   ],
   "peerDependencies": {},
-  "dependencies": {
-    "tslib": "^2.4.0"
-  }
+  "dependencies": {}
 }
